@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 class CH_Lattice(object):
     """
@@ -12,6 +13,9 @@ class CH_Lattice(object):
         self.a = kwargs.get("a")
         self.M = kwargs.get("M")
         self.K = kwargs.get("K")
+        # Spatial and temporal resolution of the the simulation.
+        self.dx = kwargs.get("dx")
+        self.dt = kwargs.get("dt")
         # Boolean, whether or not step_forward() should return an image to be drawn.
         self.animate = kwargs.get("animate")
         # Construct the required lattices for simulation.
@@ -26,6 +30,14 @@ class CH_Lattice(object):
         self.phi = np.random.choice(a=[-1.0,0.0,1.0], size=self.size)
         self.mu = self.gen_lattice(self.size, self.chemical_potential)
 
+    def bc(self, indices):
+        """
+            Determines if a pair of indices falls outside the boundary of the
+            lattice and if so, applies a periodic (toroidal) boundary condition
+            to return new indices.
+        """
+        return((indices[0]%self.size[0], indices[1]%self.size[1]))
+
     def disc_laplacian(self, lattice, indices):
         """
             Recieves a lattice of scalar values and pair of indices, calculates
@@ -34,9 +46,10 @@ class CH_Lattice(object):
             # TODO: generalise this to n dimensions!
         """
         i, j = indices
-        laplacian_x = lattice[i+1,j] + lattice[i-1,j] - 2 * lattice[i,j]
-        laplacian_y = lattice[i,j+1] + lattice[i,j-1] - 2 * lattice[i,j]
-        laplacian = (laplacian_x + laplacian_y) / dx**2
+        laplacian_x = lattice[self.bc((i+1,j))] + lattice[self.bc((i-1,j))] - 2 * lattice[i,j]
+        laplacian_y = lattice[self.bc((i,j+1))] + lattice[self.bc((i,j-1))] - 2 * lattice[i,j]
+        laplacian = (laplacian_x + laplacian_y) / self.dx**2
+        print(laplacian)
         return(laplacian)
 
     def disc_gradient(self, lattice, indices):
@@ -47,9 +60,9 @@ class CH_Lattice(object):
             # TODO: generalise this to n dimensions!
         """
         i, j = indices
-        gradient_x = lattice[i+1,j] - lattice[i-1,j]
-        gradient_y = lattice[i,j+1] - lattice[i,j-1]
-        gradient = (gradient_x + gradient_y) / (2.0 * dx)
+        gradient_x = lattice[self.bc((i+1,j))] - lattice[self.bc((i-1,j))]
+        gradient_y = lattice[self.bc((i,j+1))] - lattice[self.bc((i,j-1))]
+        gradient = (gradient_x + gradient_y) / (2.0 * self.dx)
         return(gradient)
 
     def chemical_potential(self, indices):
@@ -57,9 +70,9 @@ class CH_Lattice(object):
             Recieves a pair of indices, calculates and returns a scalar value of
             the chemical potential of phi at the corresponding point on the lattice.
         """
-        chem_potential = (-self.a * self.phi[indices]
+        chem_potential = (- self.a * self.phi[indices]
                           + self.a * self.phi[indices]**3
-                          - self.kappa * self.disc_laplacian(self.phi, indices)
+                          - self.K * self.disc_laplacian(self.phi, indices)
                           )
         return(chem_potential)
 
@@ -82,11 +95,11 @@ class CH_Lattice(object):
         """
 
         i, j = indices
-        nn_sum = (self.mu[i-1,j] + self.mu[i+1,j]
-                  + self.mu[i,j-1] + self.mu[i,j+1]
+        nn_sum = (self.mu[self.bc((i-1,j))] + self.mu[self.bc((i+1,j))]
+                  + self.mu[self.bc((i,j-1))] + self.mu[self.bc((i,j+1))]
                   - 4 * self.mu[i,j]
                   )
-        phi_next = self.phi[i,j] + self.M * (dt / dx**2) * nn_sum
+        phi_next = self.phi[i,j] + self.M * (self.dt / self.dx**2) * nn_sum
         return(phi_next)
 
     def jacobi_step(self):
@@ -104,20 +117,20 @@ class CH_Lattice(object):
         new_lattice = np.zeros(shape)
         for i in range(shape[0]):
             for j in range(shape[1]):
-                new_lattice[i,j] = func(indices)
+                new_lattice[i,j] = func((i,j))
         return(new_lattice)
 
-    def step_forward(self, **kwargs):
+    def step_forward(self, *args):
         """
             Steps the simulation forward one iteration using a specified
             integration algorithm.
         """
-        algorithm = kwargs.get("algorithm")
-        self.phi = gen_lattice(self.size, algorithm)
-        self.mu = gen_lattice(self.size, chemical_potential)
+        # algorithm = kwargs.get("algorithm")
+        self.phi = self.gen_lattice(self.size, self.euler_step)
+        self.mu = self.gen_lattice(self.size, self.chemical_potential)
 
         if self.animate == True:
-            self.image.set_array(self.lattice)
+            self.image.set_array(self.phi)
             return(self.image,)
 
     def run(self, **kwargs):
@@ -129,7 +142,7 @@ class CH_Lattice(object):
         max_iter = kwargs.get("max_iter")
 
         self.figure = plt.figure()
-        self.image = plt.imshow(self.lattice, animated=True)
+        self.image = plt.imshow(self.phi, animated=True)
         self.animation = animation.FuncAnimation(self.figure, self.step_forward,
                                                  frames=max_iter, repeat=False,
                                                  interval=100, blit=True
