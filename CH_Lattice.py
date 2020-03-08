@@ -27,7 +27,7 @@ class CH_Lattice(object):
             Generates two scalar fields and stores them as class attributes.
         """
 
-        self.phi = np.random.choice(a=[-1.0,0.0,1.0], size=self.size)
+        self.phi = np.random.choice(a=[-0.5,0.5], size=self.size)
         self.mu = self.gen_lattice(self.size, self.chemical_potential)
 
     def bc(self, indices):
@@ -46,11 +46,9 @@ class CH_Lattice(object):
             # TODO: generalise this to n dimensions!
         """
         i, j = indices
-        laplacian_x = lattice[self.bc((i+1,j))] + lattice[self.bc((i-1,j))] - 2 * lattice[i,j]
-        laplacian_y = lattice[self.bc((i,j+1))] + lattice[self.bc((i,j-1))] - 2 * lattice[i,j]
-        laplacian = (laplacian_x + laplacian_y) / self.dx**2
-        print(laplacian)
-        return(laplacian)
+        laplacian_x = (lattice[self.bc((i+1,j))] + lattice[self.bc((i-1,j))] - 2 * lattice[i,j]) / self.dx**2
+        laplacian_y = (lattice[self.bc((i,j+1))] + lattice[self.bc((i,j-1))] - 2 * lattice[i,j]) / self.dx**2
+        return(laplacian_x + laplacian_y)
 
     def disc_gradient(self, lattice, indices):
         """
@@ -60,10 +58,10 @@ class CH_Lattice(object):
             # TODO: generalise this to n dimensions!
         """
         i, j = indices
-        gradient_x = lattice[self.bc((i+1,j))] - lattice[self.bc((i-1,j))]
-        gradient_y = lattice[self.bc((i,j+1))] - lattice[self.bc((i,j-1))]
-        gradient = (gradient_x + gradient_y) / (2.0 * self.dx)
-        return(gradient)
+        gradient_x = (lattice[self.bc((i+1,j))] - lattice[self.bc((i-1,j))]) / (2.0 * self.dx)
+        gradient_y = (lattice[self.bc((i,j+1))] - lattice[self.bc((i,j-1))]) / (2.0 * self.dx)
+        return(gradient_x + gradient_y)
+
 
     def chemical_potential(self, indices):
         """
@@ -85,7 +83,7 @@ class CH_Lattice(object):
                                +(self.a/4.0) * self.phi[indices]**4
                                +(self.K/2.0) * disc_gradient(self.phi, indices)**2
                                )
-
+        return(free_energy_density)
 
     def euler_step(self, indices):
         """
@@ -99,8 +97,8 @@ class CH_Lattice(object):
                   + self.mu[self.bc((i,j-1))] + self.mu[self.bc((i,j+1))]
                   - 4 * self.mu[i,j]
                   )
-        phi_next = self.phi[i,j] + self.M * (self.dt / self.dx**2) * nn_sum
-        return(phi_next)
+        next_value = self.phi[i,j] + (self.M * self.dt / self.dx**2) * nn_sum
+        return(next_value)
 
     def jacobi_step(self):
         pass
@@ -142,10 +140,10 @@ class CH_Lattice(object):
         max_iter = kwargs.get("max_iter")
 
         self.figure = plt.figure()
-        self.image = plt.imshow(self.phi, animated=True)
+        self.image = plt.imshow(self.phi, cmap='viridis', animated=True)
         self.animation = animation.FuncAnimation(self.figure, self.step_forward,
                                                  frames=max_iter, repeat=False,
-                                                 interval=100, blit=True
+                                                 interval=200, blit=True
                                                  )
         plt.show()
 
