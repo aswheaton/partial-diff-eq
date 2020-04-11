@@ -10,8 +10,8 @@ m = int(sys.argv[2])
 
 tic = time.clock()
 
-simulation = CH_Lattice(a=0.1,M=0.1,K=0.1,dx=0.1,dt=0.1,animate=True,size=(n,m))
-simulation.run(max_iter=100)
+simulation = CH_Lattice(a=0.1,M=0.1,K=0.1,dx=1.0,dt=1.0,animate=True,size=(n,m))
+simulation.run(max_iter=5000)
 
 toc = time.clock()
 print("\nExecuted script in {} seconds.".format(toc-tic))
