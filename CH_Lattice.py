@@ -160,7 +160,6 @@ class CH_Lattice(object):
 
         plt.plot(range(len(self.free_energy)), self.free_energy)
         plt.savefig("plots/free_energy.png")
-        np.savetxt('data/free_energy.csv', self.free_energy)
         plt.show()
         plt.clf()
 
