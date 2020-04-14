@@ -13,7 +13,7 @@ tic = time.clock()
 
 simulation = CH_Lattice(a=0.1,M=0.1,K=0.1,dx=1.0,dt=1.0,animate=False,size=(n,m))
 # simulation.run(max_iter=max_iter)
-
+simulation.free_energy = []
 for step in range(max_iter):
     simulation.step_forward()
 
