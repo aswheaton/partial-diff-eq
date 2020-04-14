@@ -48,6 +48,8 @@ class CH_Lattice(object):
         i, j = indices
         laplacian_x = (lattice[self.bc((i+1,j))] + lattice[self.bc((i-1,j))] - 2 * lattice[i,j]) / self.dx**2
         laplacian_y = (lattice[self.bc((i,j+1))] + lattice[self.bc((i,j-1))] - 2 * lattice[i,j]) / self.dx**2
+        # kernel = np.array([[0,1,0],[1,4,1],[0,1,0]])
+        # laplacian = np.sum(lattice[i-1:i+1,j-1:j+1] * kernel) / self.dx**2
         return(laplacian_x + laplacian_y)
 
     def disc_gradient(self, lattice, indices):
@@ -127,7 +129,7 @@ class CH_Lattice(object):
         self.phi = self.gen_lattice(self.size, self.euler_step)
         self.mu = self.gen_lattice(self.size, self.chemical_potential)
 
-        # self.free_energy.append(np.sum(self.gen_lattice(self.size, self.free_energy_density)))
+        self.free_energy.append(np.sum(self.gen_lattice(self.size, self.free_energy_density)))
 
         if self.animate == True:
             self.steps += 1
@@ -158,6 +160,7 @@ class CH_Lattice(object):
 
         plt.plot(range(len(self.free_energy)), self.free_energy)
         plt.savefig("plots/free_energy.png")
+        plt.show()
         plt.clf()
 
     def export_animation(self, filename, dotsPerInch):
