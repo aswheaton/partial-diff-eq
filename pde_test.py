@@ -2,26 +2,20 @@ import sys
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+
 from CH_Lattice import CH_Lattice
 
-# dynamic = str(sys.argv[1])
-# mode = str(sys.argv[2])
 n = int(sys.argv[1])
 m = int(sys.argv[2])
-max_iter=int(sys.argv[3])
+phi_0 = float(sys.argv[3])
+max_iter=int(sys.argv[4])
 
-tic = time.clock()
+simulation = CH_Lattice(a=0.1, M=0.1, K=0.1, phi_0=phi_0,
+                        dx=1.0, dt=1.0, size=(n,m)
+                        )
+simulation.run(animate=True, max_iter=max_iter)
 
-simulation = CH_Lattice(a=0.1,M=0.1,K=0.1,dx=1.0,dt=1.0,animate=False,size=(n,m))
-# simulation.run(max_iter=max_iter)
-simulation.free_energy = []
-for step in range(max_iter):
-    print(step)
-    simulation.step_forward()
-
-plt.plot(range(len(self.free_energy)), simulation.free_energy)
-plt.savefig("plots/free_energy.png")
-np.savetxt('data/free_energy.csv', simulation.free_energy)
-
-toc = time.clock()
-print("\nExecuted script in {} seconds.".format(toc-tic))
+plt.plot(range(len(simulation.free_energy)), simulation.free_energy)
+plt.title("Free Energy for phi_0={}".format(phi_0))
+plt.savefig("plots/free_energy_phi0={}.png".format(phi_0))
+np.savetxt("data/free_energy_phi0={}.csv".format(phi_0), simulation.free_energy)
