@@ -73,6 +73,13 @@ class CH_Lattice(object):
         gradient_y = (lattice[self.bc((i,j+1))] - lattice[self.bc((i,j-1))]) / (2.0 * self.dx)
         return(gradient_x + gradient_y)
 
+    def conv_gradient(self, field):
+        """
+        Calculate the gradient at every point on the lattice simultaneously
+        by convolving with a kernel. Return the entire field of gradient values.
+        """
+        kernel = np.array([[0.0,1.0,0.0],[1.0,0.0,1.0],[0.0,1.0,0.0]])
+        return(signal.convolve2d(field, kernel, boundary='wrap', mode='same')/(2.0*self.dx))
 
     def chemical_potential(self, indices):
         """
