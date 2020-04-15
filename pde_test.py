@@ -13,7 +13,7 @@ max_iter=int(sys.argv[4])
 simulation = CH_Lattice(a=0.1, M=0.1, K=0.1, phi_0=phi_0,
                         dx=1.0, dt=1.0, size=(n,m)
                         )
-simulation.run(animate=True, max_iter=max_iter)
+simulation.run(animate=False, max_iter=max_iter)
 
 plt.plot(range(len(simulation.free_energy)), simulation.free_energy)
 plt.title("Free Energy for phi_0={}".format(phi_0))

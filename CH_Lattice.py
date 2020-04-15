@@ -29,9 +29,8 @@ class CH_Lattice(object):
         """
         Generates two scalar fields and stores them as class attributes.
         """
-        noise = np.random.choice(a=[-1.0,1.0], size=self.size) * np.random.random(self.size)
-        self.phi = self.phi_0 + noise
-        self.mu = self.gen_lattice(self.size, self.chemical_potential)
+        self.phi = self.phi_0 + np.random.uniform(-0.01,0.011, size=self.size)
+        self.mu = self.chemical_potential()
 
     def bc(self, indices):
         """
@@ -53,14 +52,6 @@ class CH_Lattice(object):
         laplacian_y = (lattice[self.bc((i,j+1))] + lattice[self.bc((i,j-1))] - 2 * lattice[i,j]) / self.dx**2
         return(laplacian_x + laplacian_y)
 
-    def conv_laplacian(self, field):
-        """
-        Calculate the laplacian at every point on the lattice simultaneously
-        by convolving with a kernel. Return the entire field of laplacians.
-        """
-        kernel = np.array([[0.0,1.0,0.0],[1.0,4.0,1.0],[0.0,1.0,0.0]])
-        return(signal.convolve2d(field, kernel, boundary='wrap', mode='same')/self.dx**2)
-
     def disc_gradient(self, lattice, indices):
         """
         Recieves a lattice of scalar values and pair of indices, calculates
@@ -73,45 +64,45 @@ class CH_Lattice(object):
         gradient_y = (lattice[self.bc((i,j+1))] - lattice[self.bc((i,j-1))]) / (2.0 * self.dx)
         return(gradient_x + gradient_y)
 
+    def conv_laplacian(self, field):
+        """
+        Calculate the laplacian at every point on the lattice simultaneously
+        by convolving with a kernel. Return the entire field of laplacians.
+        """
+        kernel = np.array([[0.0,1.0,0.0],[1.0,-4.0,1.0],[0.0,1.0,0.0]])
+        return(signal.convolve2d(field, kernel, boundary='wrap', mode='same')/self.dx**2)
+
     def conv_gradient(self, field):
         """
         Calculate the gradient at every point on the lattice simultaneously
         by convolving with a kernel. Return the entire field of gradient values.
         """
-        kernel = np.array([[0.0,1.0,0.0],[1.0,0.0,1.0],[0.0,1.0,0.0]])
+        kernel = np.array([[0.0,-1.0,0.0],[-1.0,0.0,1.0],[0.0,1.0,0.0]])
         return(signal.convolve2d(field, kernel, boundary='wrap', mode='same')/(2.0*self.dx))
 
-    def chemical_potential(self, indices):
+    def chemical_potential(self):
         """
         Recieves a pair of indices, calculates and returns a scalar value of
         the chemical potential of phi at the corresponding point on the lattice.
         """
-        # chem_potential = (- self.a * self.phi
-        #                   + self.a * self.phi**3
-        #                   - self.K * self.conv_laplacian(self.phi)
-        #                   )
-        chem_potential = (- self.a * self.phi[indices]
-                          + self.a * self.phi[indices]**3
-                          - self.K * self.disc_laplacian(self.phi, indices)
+        chem_potential = (- self.a * self.phi
+                          + self.a * self.phi**3
+                          - self.K * self.conv_laplacian(self.phi)
                           )
         return(chem_potential)
 
-    def free_energy_density(self, indices):
+    def free_energy_density(self):
         """
         Recieves a pair of indices, calculates and returns the free energy
         density of the system at the corresponding point on the lattice.
         """
-        # free_energy_density = (-(self.a/2.0) * self.phi**2
-        #                        +(self.a/4.0) * self.phi**4
-        #                        +(self.K/2.0) * self.conv_gradient(self.phi)**2
-        #                        )
-        free_energy_density = (-(self.a/2.0) * self.phi[indices]**2
-                               +(self.a/4.0) * self.phi[indices]**4
-                               +(self.K/2.0) * self.disc_gradient(self.phi, indices)**2
+        free_energy_density = (-(self.a/2.0) * self.phi**2
+                               +(self.a/4.0) * self.phi**4
+                               +(self.K/2.0) * self.conv_gradient(self.phi)**2
                                )
         return(free_energy_density)
 
-    def euler_step(self, indices):
+    def euler_step(self):
         """
         Recieves a pair of indices, calculates and returns a scalar value of
         phi for the next iteration of the simulation at the corresponding
@@ -119,13 +110,13 @@ class CH_Lattice(object):
         """
         # kernel = np.array([[0.0,1.0,0.0],[1.0,-4.0,1.0],[0.0,1.0,0.0]])
         # nn_sum = signal.convolve2d(self.mu, kernel, boundary='wrap', mode='same')
-        # phi_next = self.phi + (self.M * self.dt / self.dx**2) * nn_sum
-        i, j = indices
-        nn_sum = (self.mu[self.bc((i-1,j))] + self.mu[self.bc((i+1,j))]
-                  + self.mu[self.bc((i,j-1))] + self.mu[self.bc((i,j+1))]
-                  - 4 * self.mu[i,j]
-                  )
-        phi_next = self.phi[i,j] + (self.M * self.dt / self.dx**2) * nn_sum
+        phi_next = self.phi + ((self.M * self.dt / self.dx**2) * self.conv_laplacian(self.mu))
+        # i, j = indices
+        # nn_sum = (self.mu[self.bc((i-1,j))] + self.mu[self.bc((i+1,j))]
+        #           + self.mu[self.bc((i,j-1))] + self.mu[self.bc((i,j+1))]
+        #           - 4 * self.mu[i,j]
+        #           )
+        # phi_next = self.phi[i,j] + (self.M * self.dt / self.dx**2) * nn_sum
         return(phi_next)
 
     def jacobi_step(self):
@@ -151,14 +142,9 @@ class CH_Lattice(object):
         Steps the simulation forward one iteration using a specified
         integration algorithm.
         """
-        # self.phi = self.euler_step())
-        # self.mu = self.chemical_potential()
-        # self.free_energy.append(np.sum(self.free_energy_density()))
-
-        self.phi = self.gen_lattice(self.size, self.euler_step)
-        self.mu = self.gen_lattice(self.size, self.chemical_potential)
-
-        self.free_energy.append(np.sum(self.gen_lattice(self.size, self.free_energy_density)))
+        self.phi = self.euler_step()
+        self.mu = self.chemical_potential()
+        self.free_energy.append(np.sum(self.free_energy_density()))
 
         # Return an image object if the animation argument is enabled.
         if self.animate == True:
@@ -182,6 +168,7 @@ class CH_Lattice(object):
         if self.animate == True:
             self.figure = plt.figure()
             self.image = plt.imshow(self.phi, cmap='viridis', animated=True)
+            plt.colorbar()
             self.steps = 0
             self.animation = animation.FuncAnimation(self.figure,
                                                      self.step_forward,
