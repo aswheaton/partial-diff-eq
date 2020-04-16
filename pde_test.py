@@ -15,7 +15,7 @@ simulation = CH_Lattice(a=0.1, M=0.1, K=0.1, phi_0=phi_0,
                         )
 simulation.run(animate=False, max_iter=max_iter)
 
-plt.plot(range(len(simulation.free_energy)), simulation.free_energy)
-plt.title("Free Energy for phi_0={}".format(phi_0))
-plt.savefig("plots/free_energy_phi0={}.png".format(phi_0))
+#plt.plot(range(len(simulation.free_energy)), simulation.free_energy)
+#plt.title("Free Energy for phi_0={}".format(phi_0))
+#plt.savefig("plots/free_energy_phi0={}.png".format(phi_0))
 np.savetxt("data/free_energy_phi0={}.csv".format(phi_0), simulation.free_energy)
