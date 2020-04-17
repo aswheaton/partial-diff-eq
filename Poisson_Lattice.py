@@ -140,8 +140,8 @@ class Poisson_Lattice(object):
         Calculate the x, y, and z components of the electric field in 3D space
         and return them as three, 3D arrays of x, y, and z components.
         """
-        E_field = self.conv_gradient_3D(self.phi)
-        # E_field = np.gradient(self.phi)
+        # E_field = self.conv_gradient_3D(self.phi)
+        E_field = np.gradient(self.phi)
         return(-E_field[0], -E_field[1], -E_field[2])
 
     def step_forward(self, *args):
