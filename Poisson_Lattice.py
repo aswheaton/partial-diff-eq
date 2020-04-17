@@ -111,14 +111,29 @@ class Poisson_Lattice(object):
         return(phi_next)
 
     def gauss_seidel_step(self, **kwargs):
+        """
+        Update the potential array using the Gauss-Seidel algorithm.
+        """
         kernel = np.array([[[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]],
                            [[0.0,1.0,0.0],[1.0,0.0,1.0],[0.0,1.0,0.0]],
                            [[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]]])
-        self.phi = (signal.fftconvolve(self.phi, kernel, mode='same') + self.rho) / 6.0
 
-        # Over relax, if over-relaxation parameter provided.
+        checkerboard = np.tile(np.array([[[0,1],[1,0]],[[1,0],[0,1]]]),(self.size[0]//2,self.size[1]//2,self.size[2]//2))
+        black_squ = np.where(checkerboard==1)
+        white_squ = np.where(checkerboard==0)
+
+        # Use over-relaxation parameter, if provided, and otherwise set to 1.0.
         if "omega" in kwargs:
-            self.phi += kwargs.get("omega")
+            omega = kwargs.get("omega")
+        else:
+            omega = 1.0
+
+        self.phi[black_squ] = ((signal.fftconvolve(self.phi, kernel, mode='same')[black_squ] + self.rho[black_squ]) * omega / 6.0
+                               + (1.0 - omega) * self.phi[black_squ]
+                               )
+        self.phi[white_squ] = ((signal.fftconvolve(self.phi, kernel, mode='same')[white_squ] + self.rho[white_squ]) * omega / 6.0
+                               + (1.0 - omega) * self.phi[white_squ]
+                               )
 
     def electric_field_comp(self):
         """
@@ -135,8 +150,8 @@ class Poisson_Lattice(object):
         integration algorithm.
         """
         self.phi = self.jacobi_step()
-        # self.gauss_seidel_step()
-        self.set_dirchlect_boundary()
+        self.gauss_seidel_step()
+        # self.set_dirchlect_boundary()
 
         # Return an image object if the animation argument is enabled.
         if self.animate == True:
