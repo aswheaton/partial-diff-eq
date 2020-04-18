@@ -108,15 +108,8 @@ class CH_Lattice(object):
         phi for the next iteration of the simulation at the corresponding
         point on the lattice, using the (explicit) Euler algorithm.
         """
-        # kernel = np.array([[0.0,1.0,0.0],[1.0,-4.0,1.0],[0.0,1.0,0.0]])
-        # nn_sum = signal.convolve2d(self.mu, kernel, boundary='wrap', mode='same')
+
         phi_next = self.phi + ((self.M * self.dt / self.dx**2) * self.conv_laplacian(self.mu))
-        # i, j = indices
-        # nn_sum = (self.mu[self.bc((i-1,j))] + self.mu[self.bc((i+1,j))]
-        #           + self.mu[self.bc((i,j-1))] + self.mu[self.bc((i,j+1))]
-        #           - 4 * self.mu[i,j]
-        #           )
-        # phi_next = self.phi[i,j] + (self.M * self.dt / self.dx**2) * nn_sum
         return(phi_next)
 
     def jacobi_step(self):
