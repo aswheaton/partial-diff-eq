@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 from scipy import signal
 
 class Poisson_Lattice(object):
@@ -36,21 +35,24 @@ class Poisson_Lattice(object):
 
     def make_wire(self):
         """
-        Create wire along the z-axis of the charge density lattice.
+        Create wire along the z-axis of the lattice. For use only when the
+        scalar field attribute phi is actually used to contain a current density
+        along the z axis.
         """
         self.rho[self.size[0]//2, self.size[1]//2, :] = 1.0 / self.size[2]
 
-    def make_wires(self):
-        """
-        Create many wires along the z-axis of the lattice. (Rho now represents
-        current density in the z-direction.)
-        """
-        self.rho = 1.0 / self.size[0]*self.size[1]*self.size[2]
-
     def set_omega(self, omega):
+        """
+        Set the over-relaxation parameter to something other than one, for use
+        in the Gauss-Seidel update algorithm.
+        """
         self.omega = omega
 
     def set_dirchlect_boundary(self):
+        """
+        Enforce the Dirchlecht boundary condition by setting the faces of the
+        data cube to zero along each axis.
+        """
         self.phi[0,:,:], self.phi[-1,:,:] = 0.0, 0.0
         self.phi[:,0,:], self.phi[:,-1,:] = 0.0, 0.0
         self.phi[:,:,0], self.phi[:,:,-1] = 0.0, 0.0
@@ -65,6 +67,7 @@ class Poisson_Lattice(object):
 
     def conv_gradient_3D(self, field):
         """
+        DEPRECATED
         Calculate the gradient at every point on the lattice simultaneously
         by convolving with a kernel. Return the entire field of gradient values.
         """
@@ -86,6 +89,11 @@ class Poisson_Lattice(object):
         return(x_grad, y_grad, z_grad)
 
     def jacobi_step(self):
+        """
+        Calculate and return the next iteration of the scalar array using the
+        Jacobi algorithm, by convolving with a 3D kernel to get the nearest
+        neighbors summation.
+        """
         kernel = np.array([[[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]],
                            [[0.0,1.0,0.0],[1.0,0.0,1.0],[0.0,1.0,0.0]],
                            [[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]]])
@@ -93,31 +101,38 @@ class Poisson_Lattice(object):
         phi_next = (neighbors + self.rho) / 6.0
         return(phi_next)
 
-    def gauss_seidel_step(self, **kwargs):
+    def gauss_seidel_step(self):
         """
-        Update the potential array using the Gauss-Seidel algorithm.
+        Calculate and return the next iteration of the scalar array using the
+        Gauss-Seidel algorithm with the option using an over-relaxation
+        parameter if available.
+
+        Scalar array is updated in a three dimensional "checkerboard" pattern
+        using the Fast Fourier Transform to update alternating sites in parallel.
         """
-        kernel = np.array([[[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]],
-                           [[0.0,1.0,0.0],[1.0,0.0,1.0],[0.0,1.0,0.0]],
-                           [[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]]])
-
-        checkerboard = np.tile(np.array([[[0,1],[1,0]],[[1,0],[0,1]]]),(self.size[0]//2,self.size[1]//2,self.size[2]//2))
-        black_squ = np.where(checkerboard==1)
-        white_squ = np.where(checkerboard==0)
-
         # Use over-relaxation parameter, if provided, and otherwise set to 1.0.
         try:
             omega = self.omega
         except AttributeError:
             omega = 1.0
 
+        # Create alternating indices for easier indexing in checkerboard pattern.
+        checker_tile = np.array([[[0,1],[1,0]],[[1,0],[0,1]]])
+        checkerboard = np.tile(checker_tile, (self.size[0]//2,self.size[1]//2,self.size[2]//2))
+        black_squ = np.where(checkerboard==1)
+        white_squ = np.where(checkerboard==0)
+
+        # Initialise the nearest neighbors kernel for convolution.
+        kernel = np.array([[[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]],
+                           [[0.0,1.0,0.0],[1.0,0.0,1.0],[0.0,1.0,0.0]],
+                           [[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]]])
+
+        # Calculate and update the "black" sites and "white" sites in turn.
         neighbors = signal.fftconvolve(self.phi, kernel, mode='same')
-        new_blacks = (((neighbors[black_squ] + self.rho[black_squ]) / 6.0) - self.phi[black_squ]) * omega + self.phi[black_squ]
-        self.phi[black_squ] = new_blacks
+        self.phi[black_squ] = (((neighbors[black_squ] + self.rho[black_squ]) / 6.0) - self.phi[black_squ]) * omega + self.phi[black_squ]
         neighbors = signal.fftconvolve(self.phi, kernel, mode='same')
-        new_whites = (((neighbors[white_squ] + self.rho[white_squ]) / 6.0) - self.phi[white_squ]) * omega + self.phi[white_squ]
-        self.phi[white_squ] = new_whites
-#
+        self.phi[white_squ] = (((neighbors[white_squ] + self.rho[white_squ]) / 6.0) - self.phi[white_squ]) * omega + self.phi[white_squ]
+
     def electric_field_comp(self):
         """
         Calculate the x, y, and z components of the electric field in 3D space
@@ -128,35 +143,46 @@ class Poisson_Lattice(object):
         return(-E_field[0], -E_field[1], -E_field[2])
 
     def magnetic_vector_potential(self):
+        """
+        Calculate the x, y, and z components of the magnetic potential in 3D
+        space and return them as three, 3D arrays of x, y, and z components.
+
+        For use only when the scalar field attribute phi is actually used to
+        contain a current density along the z axis.
+        """
         A_field = np.gradient(self.phi)
         return(-A_field[0], -A_field[1], -A_field[2])
 
     def magnetic_field_comp(self):
+        """
+        Calculate the x, y, and z components of the magnetic field in 3D space
+        from the magentic potential and return them as three, 3D arrays of x, y,
+        and z components.
+
+        For use only when the scalar field attribute phi is actually used to
+        contain a current density along the z axis.
+        """
         a_field_x, a_field_y, a_field_z = self.magnetic_vector_potential()
-        # Calculate the curl of the vector potential field.
+        # Calculate and return the curl of the vector potential field.
         B_field_x = a_field_y - a_field_z
         B_field_y = a_field_z - a_field_x
         B_field_z = a_field_x - a_field_y
         return(B_field_x, B_field_y, B_field_z)
 
 
-    def step_forward(self, *args):
+    def step_forward(self):
         """
         Steps the simulation forward one iteration using a specified
-        integration algorithm.
+        integration algorithm, and enforces the boundary condition.
         """
-        # self.phi = self.jacobi_step()
-        self.gauss_seidel_step()
+        if self.algorithm == "jacobi":
+            self.phi = self.jacobi_step()
+        elif self.algorithm == "gauss-seidel":
+            self.gauss_seidel_step()
+
         self.set_dirchlect_boundary()
 
-        # Return an image object if the animation argument is enabled.
-        if self.animate == True:
-            self.steps += 1
-            print("Simulation step {}...".format(self.steps), end="\r")
-            self.image.set_array(self.phi)
-            return(self.image,)
-
-    def converged(self, ref_state, tolerance):
+    def is_converged(self, ref_state, tolerance):
         """
         Check whether the solution has converged within some tolerance with
         respect to some reference state.
@@ -171,42 +197,30 @@ class Poisson_Lattice(object):
         Sets up a figure, image, and FuncAnimation instance, then runs the
         simulation to the specified maximum number of iterations.
         """
-        # Boolean, whether or not step_forward() should return an image.
-        self.animate = kwargs.get("animate")
         # Number of simulation steps using step_forward() method.
         max_iter = kwargs.get("max_iter")
         # Tolerance for convergence of the solution.
         tolerance = kwargs.get("tol")
+        # Which update algorithm to use.
+        if kwargs.get("alg") == "jacobi":
+            self.algorithm == "jacobi"
+        if kwargs.get("alg") == "gs":
+            self.algorithm == "gauss-seidel"
 
-        # Run the simulation using FuncAnimation if animate argument is enabled.
-        if self.animate == True:
-            self.figure = plt.figure()
-            self.image = plt.imshow(self.phi, cmap='viridis', animated=True)
-            plt.colorbar()
-            self.steps = 0
-            self.animation = animation.FuncAnimation(self.figure,
-                                                     self.step_forward,
-                                                     frames=max_iter,
-                                                     repeat=False,
-                                                     interval=75, blit=True
-                                                     )
-            plt.show()
-            plt.clf()
+        # Run the simulation, manually updating the simulation with step_forward() method.
+        for step in range(max_iter):
+            print("Simulation step {} of {}...".format(step, max_iter), end="\r")
+            ref_state = np.array(self.phi)
+            self.step_forward()
+            if self.is_converged(ref_state, tolerance) == True:
+                print("\nConvergence after {} steps!".format(step))
+                break
+            elif step == max_iter - 1:
+                print("\nReached max iterations w/o convergence!")
+            else:
+                pass
 
-        # Otherwise, manually update the simulation with step_forward() method.
-        elif self.animate == False:
-            for step in range(max_iter):
-                print("Simulation step {} of {}...".format(step, max_iter), end="\r")
-                ref_state = np.array(self.phi)
-                self.step_forward()
-                if self.converged(ref_state, tolerance) == True:
-                    print("\nConvergence after {} steps!".format(step))
-                    break
-                elif step == max_iter - 1:
-                    print("\nReached max iterations w/o convergence!")
-                else:
-                    pass
-
+        # Return the number of the last iteration before convergence.
         return(step)
 
     def export_animation(self, filename, dotsPerInch):
