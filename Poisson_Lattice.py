@@ -201,11 +201,8 @@ class Poisson_Lattice(object):
         max_iter = kwargs.get("max_iter")
         # Tolerance for convergence of the solution.
         tolerance = kwargs.get("tol")
-        # Which update algorithm to use.
-        if kwargs.get("alg") == "jacobi":
-            self.algorithm == "jacobi"
-        if kwargs.get("alg") == "gs":
-            self.algorithm == "gauss-seidel"
+        # Which update algorithm to use, can be "jacobi" or "gauss-seidel"
+        self.algorithm = kwargs.get("alg")
 
         # Run the simulation, manually updating the simulation with step_forward() method.
         for step in range(max_iter):
