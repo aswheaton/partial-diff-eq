@@ -111,13 +111,13 @@ class Poisson_Lattice(object):
         except AttributeError:
             omega = 1.0
 
-        self.phi[black_squ] = ((signal.fftconvolve(self.phi, kernel, mode='same')[black_squ] + self.rho[black_squ]) * omega / 6.0
-                               + (1.0 - omega) * self.phi[black_squ]
-                               )
-        self.phi[white_squ] = ((signal.fftconvolve(self.phi, kernel, mode='same')[white_squ] + self.rho[white_squ]) * omega / 6.0
-                               + (1.0 - omega) * self.phi[white_squ]
-                               )
-
+        neighbors = signal.fftconvolve(self.phi, kernel, mode='same')
+        new_blacks = (((neighbors[black_squ] + self.rho[black_squ]) / 6.0) - self.phi[black_squ]) * omega + self.phi[black_squ]
+        self.phi[black_squ] = new_blacks
+        neighbors = signal.fftconvolve(self.phi, kernel, mode='same')
+        new_whites = (((neighbors[white_squ] + self.rho[white_squ]) / 6.0) - self.phi[white_squ]) * omega + self.phi[white_squ]
+        self.phi[white_squ] = new_whites
+#
     def electric_field_comp(self):
         """
         Calculate the x, y, and z components of the electric field in 3D space
@@ -145,9 +145,9 @@ class Poisson_Lattice(object):
         Steps the simulation forward one iteration using a specified
         integration algorithm.
         """
-        self.phi = self.jacobi_step()
+        # self.phi = self.jacobi_step()
         self.gauss_seidel_step()
-        # self.set_dirchlect_boundary()
+        self.set_dirchlect_boundary()
 
         # Return an image object if the animation argument is enabled.
         if self.animate == True:
@@ -197,7 +197,7 @@ class Poisson_Lattice(object):
         elif self.animate == False:
             for step in range(max_iter):
                 print("Simulation step {} of {}...".format(step, max_iter), end="\r")
-                ref_state = self.phi
+                ref_state = np.array(self.phi)
                 self.step_forward()
                 if self.converged(ref_state, tolerance) == True:
                     print("\nConvergence after {} steps!".format(step))

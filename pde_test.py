@@ -46,10 +46,11 @@ def main():
                                 dx=1.0, dt=1.0, size=(n,m)
                                 )
         simulation.run(animate=False, max_iter=max_iter)
+        # np.savetxt("data/free_energy_phi0={}.csv".format(phi_0), simulation.free_energy)
+        # simulation.free_energy = np.loadtxt("data/free_energy_phi0={}.csv".format(phi_0))
         plt.plot(range(len(simulation.free_energy)), simulation.free_energy)
         plt.title("Free Energy for phi_0={}".format(phi_0))
         plt.savefig("plots/free_energy_phi0={}.png".format(phi_0))
-        np.savetxt("data/free_energy_phi0={}.csv".format(phi_0), simulation.free_energy)
 
     elif mode == "monopole":
         e_simulation = Poisson_Lattice(epsilon=1.,phi_0=0.,dx=1.,dt=1., size=(l,n,m))
@@ -96,23 +97,27 @@ def main():
 
     elif mode == "SOR":
 
-        start, stop, steps = 1.0, 1.125, 25
-        avg_iters_to_conv = np.zeros(steps)
+        start, stop, steps = 1.0, 1.95, 96
+        iters_to_conv = np.zeros(steps)
+        omega_vals = np.linspace(start,stop,steps)
 
-        for omega in np.linspace(start,stop,steps):
-            iterations = []
-            for i in range(15):
-                e_simulation = Poisson_Lattice(epsilon=1.,phi_0=0.,dx=1.,dt=1., size=(l,n,m))
-                e_simulation.make_monopole()
-                e_simulation.set_omega(omega)
-                iterations.append(e_simulation.run(animate=False, max_iter=max_iter, tol=0.01))
+        for omega in omega_vals:
+            e_simulation = Poisson_Lattice(epsilon=1.,phi_0=0.,dx=1.,dt=1., size=(l,n,m))
+            e_simulation.make_monopole()
+            e_simulation.set_omega(omega)
+            iters = e_simulation.run(animate=False, max_iter=max_iter, tol=0.01)
+            index = np.where(omega_vals==omega)
+            iters_to_conv[index] = iters
 
-            np.savetxt("data/iters_phi={}_omega={}.csv", iterations)
-            index = np.where(np.linspace(start,stop,steps)==omega)[0]
-            avg_iters_to_conv[index] = np.mean(iterations)
+        stacked_matrix = np.stack([omega_vals, iters_to_conv], axis=1)
+        np.savetxt("data/iters_to_conv_phi={}.csv".format(phi_0), stacked_matrix)
 
-
-        plt.plot(np.linspace(start,stop,steps), avg_iters_to_conv, "or")
+        plt.plot(np.linspace(start,stop,steps), iters_to_conv, "or")
+        plt.xlabel("Over-relaxation Parameter (omega)")
+        plt.ylabel("Iterations to Convergence")
+        min_index = np.where(iters_to_conv==np.min(iters_to_conv))[0]
+        plt.title("phi=0.5, Minimum at omega={}".format(omega[min_index][0]))
         plt.savefig("plots/sor_phi0={}.png".format(phi_0))
         plt.show()
+        plt.clf()
 main()
