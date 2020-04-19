@@ -14,7 +14,10 @@ max_iter=int(sys.argv[5])
 mode = sys.argv[6]
 
 def plot_vector_field_2D(x_comp, y_comp):
-
+    """
+    Code which flattens input arrays and their indices. Required to make
+    matplotlib.pyplot.quiver plot work properly, unfortunately.
+    """
     long_list_size = x_comp.shape[0]*x_comp.shape[1]
     i_vals = np.zeros(long_list_size, dtype=int)
     j_vals = np.zeros(long_list_size, dtype=int)
@@ -31,8 +34,9 @@ def plot_vector_field_2D(x_comp, y_comp):
 
     plt.quiver(i_vals, j_vals, e_vals_x, e_vals_y)
 
-    # stacked_matrix = np.stack([i_vals, j_vals, e_vals_x, e_vals_y], axis=1)
-    # np.savetxt("data/e_xy_monopole.csv", stacked_matrix)
+    # Return a flattened array which can be exported to a gnuplot processable format.
+    stacked_matrix = np.stack([i_vals, j_vals, e_vals_x, e_vals_y], axis=1)
+    return(stacked_matrix)
 
 def main():
 
@@ -50,7 +54,7 @@ def main():
         # simulation.free_energy = np.loadtxt("data/free_energy_phi0={}.csv".format(phi_0))
         plt.plot(range(len(simulation.free_energy)), simulation.free_energy)
         plt.title("Free Energy for phi_0={}".format(phi_0))
-        plt.savefig("plots/free_energy_phi0={}.png".format(phi_0))
+        plt.savefig("plots/free_energy_phi_0={}.png".format(phi_0))
 
     elif mode == "monopole":
         e_simulation = Poisson_Lattice(epsilon=1.,phi_0=0.,dx=1.,dt=1., size=(l,n,m))
@@ -109,8 +113,8 @@ def main():
             index = np.where(omega_vals==omega)
             iters_to_conv[index] = iters
 
-        stacked_matrix = np.stack([omega_vals, iters_to_conv], axis=1)
-        np.savetxt("data/iters_to_conv_phi={}.csv".format(phi_0), stacked_matrix)
+        # stacked_matrix = np.stack([omega_vals, iters_to_conv], axis=1)
+        # np.savetxt("data/iters_to_conv_phi_0={}.csv".format(phi_0), stacked_matrix)
 
         plt.plot(np.linspace(start,stop,steps), iters_to_conv, "or")
         plt.xlabel("Over-relaxation Parameter (omega)")
