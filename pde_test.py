@@ -95,16 +95,24 @@ def main():
         plt.clf()
 
     elif mode == "SOR":
-        start, stop, steps = 1.0, 1.125, 25
-        iters_to_conv = np.zeros(steps)
-        for omega in np.linspace(start,stop,steps):
-            e_simulation = Poisson_Lattice(epsilon=1.,phi_0=0.,dx=1.,dt=1., size=(l,n,m))
-            e_simulation.make_monopole()
-            e_simulation.set_omega(omega)
-            index = np.where(np.linspace(start,stop,steps)==omega)[0]
-            iters_to_conv[index] = e_simulation.run(animate=False, max_iter=max_iter, tol=0.01)
 
-        plt.plot(np.linspace(start,stop,steps), iters_to_conv, "or")
+        start, stop, steps = 1.0, 1.125, 25
+        avg_iters_to_conv = np.zeros(steps)
+
+        for omega in np.linspace(start,stop,steps):
+            iterations = []
+            for i in range(15):
+                e_simulation = Poisson_Lattice(epsilon=1.,phi_0=0.,dx=1.,dt=1., size=(l,n,m))
+                e_simulation.make_monopole()
+                e_simulation.set_omega(omega)
+                iterations.append(e_simulation.run(animate=False, max_iter=max_iter, tol=0.01))
+
+            np.savetxt("data/iters_phi={}_omega={}.csv", iterations)
+            index = np.where(np.linspace(start,stop,steps)==omega)[0]
+            avg_iters_to_conv[index] = np.mean(iterations)
+
+
+        plt.plot(np.linspace(start,stop,steps), avg_iters_to_conv, "or")
         plt.savefig("plots/sor_phi0={}.png".format(phi_0))
         plt.show()
 main()
