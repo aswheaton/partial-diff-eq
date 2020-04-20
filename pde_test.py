@@ -84,6 +84,15 @@ def main():
         plt.show()
         plt.clf()
 
+        rows, cols, potential = [], [], []
+        for i in range(phi_slice_xy.shape[0]):
+            for j in range(phi_slice_xy.shape[1]):
+                rows.append(i)
+                cols.append(j)
+                potential.append(phi_slice_xy[i,j])
+        flat_array = np.stack([rows,cols,potential], axis=1)
+        np.savetxt("data/e_pot_xy_monopole.csv", flat_array, header="i, j, phi")
+
         center_index = (l//2,n//2)
         plot_radial_profile(phi_slice_xy, center_index)
         plt.xlabel("Radius (Log Scale)")
@@ -99,7 +108,7 @@ def main():
         plt.imshow(np.sqrt(xy_plane_x**2+xy_plane_y**2), origin="lower", cmap="viridis")
         plt.colorbar()
         flat_array = plot_vector_field_2D(xy_plane_x, xy_plane_y)
-        np.savetxt("data/e_xy_monopole.csv", flat_array, header="i, j, E_i, E_j")
+        np.savetxt("data/e_field_xy_monopole.csv", flat_array, header="i, j, E_i, E_j")
         plt.title("Electric Field Direction & Magnitude")
         plt.savefig("plots/e_field_and_mag.png")
         plt.show()
@@ -139,7 +148,7 @@ def main():
         mag_field_x_xy = mag_field_x[:,:,slice_index]
         mag_field_y_xy = mag_field_y[:,:,slice_index]
         flat_array = plot_vector_field_2D(mag_field_x_xy, mag_field_y_xy)
-        np.savetxt("data/m_field_xy_wire.csv", flat_array, header="i, j, E_i, E_j")
+        np.savetxt("data/m_field_xy_wire.csv", flat_array, header="i, j, B_i, B_j")
         plt.title("Magnetic Field Direction & Magnetic Potential Magnitude")
         plt.savefig("plots/mag_field_mag_pot.png")
         plt.show()
