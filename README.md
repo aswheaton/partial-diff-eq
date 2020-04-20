@@ -35,8 +35,10 @@ behaviour of both classes.
 Small random noise is added to this value on construction of an instance.
 
 `max_iter`: (int) the maximum number of iterations to which the simulation
-will be run before exiting. Simulations with a $-0.5 <= \phi_0 <= 0.5$ will
-reach converge within 10,000 iterations. 
+will be run before exiting. Simulations on the Poisson lattice with a $-0.5
+<= \phi_0 <= 0.5$ will converge within < 10,000 iterations. It takes
+approximately 1,000,000 steps for the free energy of the Cahn-Hilliard
+mixture to reach its equilibrium value.
 
 `mode`: (str) invokes one of several test cases for the simulation (see
 descriptions below). Can be `oildrop`, `monopole`, `wires`, or `SOR`.
