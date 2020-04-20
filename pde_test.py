@@ -66,7 +66,7 @@ def main():
         # np.savetxt("data/free_energy_phi0={}.csv".format(phi_0), simulation.free_energy)
         plt.plot(range(len(simulation.free_energy)), simulation.free_energy)
         plt.title("Free Energy for phi_0={}".format(phi_0))
-        plt.savefig("plots/free_energy_phi_0={}.png".format(phi_0))
+        # plt.savefig("plots/free_energy_phi_0={}.png".format(phi_0))
 
     elif mode == "monopole":
         e_simulation = Poisson_Lattice(epsilon=1.,phi_0=phi_0,dx=1.,dt=1., size=(l,n,m))

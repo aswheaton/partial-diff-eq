@@ -29,19 +29,12 @@ class CH_Lattice(object):
         """
         Generates two scalar fields and stores them as class attributes.
         """
-        self.phi = self.phi_0 + np.random.uniform(-0.01,0.011, size=self.size)
+        self.phi = self.phi_0 + np.random.uniform(-1.,1., size=self.size)
         self.mu = self.chemical_potential()
-
-    def bc(self, indices):
-        """
-        Determines if a pair of indices falls outside the boundary of the
-        lattice and if so, applies a periodic (toroidal) boundary condition
-        to return new indices.
-        """
-        return((indices[0]%self.size[0], indices[1]%self.size[1]))
 
     def disc_laplacian(self, lattice, indices):
         """
+        DEPRECATED
         Recieves a lattice of scalar values and pair of indices, calculates
         and returns the discretised laplacian at the corresponding point on
         the lattice using a centered difference estimate.
@@ -54,6 +47,7 @@ class CH_Lattice(object):
 
     def disc_gradient(self, lattice, indices):
         """
+        DEPRECATED
         Recieves a lattice of scalar values and pair of indices, calculates
         and returns the discretised gradient at the corresponding point on
         the lattice using a centered difference estimate.
@@ -70,15 +64,16 @@ class CH_Lattice(object):
         by convolving with a kernel. Return the entire field of laplacians.
         """
         kernel = np.array([[0.0,1.0,0.0],[1.0,-4.0,1.0],[0.0,1.0,0.0]])
-        return(signal.convolve2d(field, kernel, boundary='wrap', mode='same')/self.dx**2)
+        return(signal.convolve2d(field, kernel, boundary='wrap', mode='same') / self.dx**2)
 
     def conv_gradient(self, field):
         """
+        DEPRECATED
         Calculate the gradient at every point on the lattice simultaneously
         by convolving with a kernel. Return the entire field of gradient values.
         """
         kernel = np.array([[0.0,-1.0,0.0],[-1.0,0.0,1.0],[0.0,1.0,0.0]])
-        return(signal.convolve2d(field, kernel, boundary='wrap', mode='same')/(2.0*self.dx))
+        return(signal.convolve2d(field, kernel, boundary='wrap', mode='same') / (2.0 * self.dx))
 
     def chemical_potential(self):
         """
@@ -112,24 +107,6 @@ class CH_Lattice(object):
         phi_next = self.phi + ((self.M * self.dt / self.dx**2) * self.conv_laplacian(self.mu))
         return(phi_next)
 
-    def jacobi_step(self):
-        pass
-
-    def gauss_seidel_step(self):
-        pass
-
-    def gen_lattice(self, shape, func):
-        """
-        Generate a new lattice of specified shape using a specified function
-        handle to a function or method which recieves a pair of indices and
-        returns a scalar value.
-        """
-        new_lattice = np.zeros(shape)
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                new_lattice[i,j] = func((i,j))
-        return(new_lattice)
-
     def step_forward(self, *args):
         """
         Steps the simulation forward one iteration using a specified
@@ -160,7 +137,7 @@ class CH_Lattice(object):
         # Run the simulation using FuncAnimation if animate argument is enabled.
         if self.animate == True:
             self.figure = plt.figure()
-            self.image = plt.imshow(self.phi, cmap='viridis', animated=True)
+            self.image = plt.imshow(self.phi, cmap='seismic', interpolation='bicubic', animated=True)
             plt.colorbar()
             self.steps = 0
             self.animation = animation.FuncAnimation(self.figure,
